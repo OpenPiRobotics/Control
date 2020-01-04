@@ -11,6 +11,10 @@ import busio
 from PIL import Image, ImageDraw, ImageFont
 import adafruit_ssd1306
 
+# for ip address
+
+import subprocess
+
 # Create the I2C interface.
 i2c = busio.I2C(SCL, SDA)
 
@@ -141,20 +145,47 @@ def updateDisplay():
 
 # end OLED functions
 
+def homeDisplayUpdate():
+    cmd = "python3 /home/pi/RedBoard/system/bat_check.py"
+    mainBattery = subprocess.check_output(cmd, shell=True).decode()
+    mainBattery = mainBattery.replace("\n", "")
+    if len(mainBattery) == 4:
+        mainBattery += "0"
+    text1 = "Batt: " + mainBattery + "V"
+    lineOneText(text1)
+
+    joy_battery_level = joystick.battery_level * 100
+    text2 = "Joy: " + str(joy_battery_level) + "%"
+    lineTwoText(text2)
+
+    print(text1 + " " + text2)
+
+
 # setup for main loop
 
-menu = {'Manual': True, 'Line': False, 'Maze': False, 'Toxic': False, 'Zombie': False, 'Exit': False}
+menu = {'Manual': True, 'Line': False, 'Maze': False, 'Toxic': False, 'Zombie': False, 'IP': False, 'Exit': False,
+        'Shutdown': False, 'Reboot': False}
 menuItems = list(menu)
 menuLenght = len(menuItems)
 menuIndex = 0
 lastMenuIndex = menuIndex
 menuFlag = False
 mode = menuIndex
+oldMode = mode
 currentMenu = {**menu}
 displayTimeOut = 1 # time in seconds for display to blank or return to home screen
 displayTimeOutFlag = False
 savedTime = time()
 currentTime = time()
+newModeFlag = False
+#cmd = "python3 /home/pi/RedBoard/system/bat_check.py"
+#mainBattery = subprocess.check_output(cmd, shell = True ).decode()
+lastBatteryTime = time()
+refreshTime = 60 # in seconds
+lastRefresh = time() - refreshTime
+displayHomeScreenFlag = False
+
+
 
 # End of setup
 
@@ -201,23 +232,29 @@ try:
 
                         if 'home' in joystick.presses:
 
+                            clearDisplay()
+
                             if menuFlag:
                                 menuFlag = False
                                 menu = {**currentMenu}
                                 print("Menu exitied")
-                                clearDisplay()
-                                print(menu)
+                                displayHomeScreenFlag = True
+
+                                #print(menu)
 
                             else:
                                 currentMenu = {**menu}
-                                #print(currentMenu)
+                                # print(currentMenu)
                                 menuFlag = True
-                                text = "MODE: " + menuItems[mode]
-                                print(text)
+                                if menu[menuItems[mode]]:
+                                    text = "MODE: " + menuItems[mode]
+                                    print(text)
+                                else:
+                                    text = "No mode selected"
                                 print("menu entered")
                                 lineOneText(text)
                                 for key in menuItems:
-                                     menu[key] = False
+                                    menu[key] = False
 
 
 
@@ -241,19 +278,21 @@ try:
                         # if 'cycle' is press when in menu select assign current menu item to mode
 
                         if 'circle' in joystick.presses and menuFlag:
+                            oldMode = mode
                             mode = menuIndex
                             menuFlag = False
-                            clearDisplay()
-                            text = "New Mode: " + menuItems[mode]
-                            print(text)
-                            lineOneText(text)
+                            newModeFlag = True
                             for key in menuItems:
                                 if key == menuItems[mode]:
                                     menu[key] = True
                                 else:
                                     menu[key] = False
+
                             savedTime = time()
                             displayTimeOutFlag = True
+                            displayTimeOut = 2
+
+
 
                         # print menu item to command line
 
@@ -265,14 +304,30 @@ try:
                             lineTwoText("'O' to select")
                             lastMenuIndex = menuIndex
 
-                    #screen blanking
+                    # screen blanking or home screen update
+                    # home screen refresh time in seconds
 
                     currentTime = time()
                     if displayTimeOutFlag and (currentTime - savedTime > displayTimeOut):
                         clearDisplay()
                         displayTimeOutFlag = False
+                        displayHomeScreenFlag = True
+
+
+                    #updateDisplay()
+
+                    if menuFlag == False and displayTimeOutFlag == False:
+                        if currentTime - lastRefresh > refreshTime or displayHomeScreenFlag:
+                            homeDisplayUpdate()
+                            lastRefresh = time()
+                            displayHomeScreenFlag = False
 
                     updateDisplay()
+
+
+                    # end of screen blanking or home screen update
+
+
 
                     if menu['Manual']:
 
@@ -297,15 +352,55 @@ try:
                         # code for Zombie here
                         pass
 
+                    if menu['IP']:
+                        # code for displaying IP address
+                        cmd = "hostname -I | cut -d\' \' -f1"
+                        IP = subprocess.check_output(cmd, shell=True).decode("utf-8")
+                        print(IP)
+                        lineOneText('')
+                        lineTwoText(IP)
+
+                        menu['IP'] = False
+                        newModeFlag = False
+                        mode = 0
+                        savedTime = time()
+                        displayTimeOutFlag = True
+                        displayTimeOut = 5
+
                     if menu['Exit']:
                         # Exit to commard line
+                        newModeFlag = False
                         raise RobotStopException()
+
+                    if menu['Shutdown']:
+                        # Shutdown the Raspberry Pi
+                        newModeFlag = False
+                        cmd = "sudo halt"
+                        subprocess.call(cmd, shell=True)
+
+                    if menu['Reboot']:
+                        # Reboot the Raspberry Pi
+                        newModeFlag = False
+                        cmd = "sudo reboot"
+                        subprocess.call(cmd, shell=True)
+
+                    if newModeFlag:
+                        clearDisplay()
+                        text = "New Mode: " + menuItems[mode]
+                        print(text)
+                        lineOneText(text)
+                        newModeFlag = False
+
 
         except IOError:
             # We get an IOError when using the ControllerResource if we don't have a controller yet,
             # so in this case we just wait a second and try again after printing a message.
             print('No controller found yet')
+            lineOneText("No Controller")
+            lineTwoText("  Connected")
+            updateDisplay()
             sleep(1)
+            clearDisplay()
 
 except RobotStopException:
     # This exception will be raised when the home button is pressed, at which point we should
@@ -316,6 +411,6 @@ except RobotStopException:
     lineOneText("exited to ")
     lineTwoText("command line")
     updateDisplay()
-    sleep(5)
+    sleep(1)
     clearDisplay()
     updateDisplay()
