@@ -153,9 +153,11 @@ def homeDisplayUpdate():
         mainBattery += "0"
     text1 = "Batt: " + mainBattery + "V"
     lineOneText(text1)
-
-    joy_battery_level = joystick.battery_level * 100
-    text2 = "Joy: " + str(joy_battery_level) + "%"
+    if not joystick.battery_level == None:
+        joy_battery_level = joystick.battery_level * 100
+        text2 = "Joy: " + str(joy_battery_level) + "%"
+    else:
+        text2 = "Joy: Not supported"
     lineTwoText(text2)
 
     print(text1 + " " + text2)
@@ -178,8 +180,6 @@ displayTimeOutFlag = False
 savedTime = time()
 currentTime = time()
 newModeFlag = False
-#cmd = "python3 /home/pi/RedBoard/system/bat_check.py"
-#mainBattery = subprocess.check_output(cmd, shell = True ).decode()
 lastBatteryTime = time()
 refreshTime = 60 # in seconds
 lastRefresh = time() - refreshTime
