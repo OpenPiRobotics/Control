@@ -18,32 +18,38 @@ import subprocess
 # Create the I2C interface.
 i2c = busio.I2C(SCL, SDA)
 
+# is OLED fitted
+
+OLEDflag = False
+
 # Create the SSD1306 OLED class and setup the display
 # The first two parameters are the pixel width and pixel height.  Change these
 # to the right size for your display!
 try:
     disp = adafruit_ssd1306.SSD1306_I2C(128, 32, i2c)
+    OLEDflag = True
 except ValueError:
     print('')
     print('SSD1306 OLED Screen not found')
     print('')
-    exit()
 
-# Create blank image for drawing.
-# Make sure to create image with mode '1' for 1-bit color.
-width = disp.width
-height = disp.height
-image = Image.new('1', (width, height))
+if OLEDflag:
 
-# Get drawing object to draw on image.
-draw = ImageDraw.Draw(image)
+    # Create blank image for drawing.
+    # Make sure to create image with mode '1' for 1-bit color.
+    width = disp.width
+    height = disp.height
+    image = Image.new('1', (width, height))
 
-font = ImageFont.truetype('/home/pi/RedBoard/system/Greenscr.ttf', 12)
+    # Get drawing object to draw on image.
+    draw = ImageDraw.Draw(image)
+
+    font = ImageFont.truetype('/home/pi/RedBoard/system/Greenscr.ttf', 12)
 
 
 
 try:
-    # Attempt to import the Explorer HAT library. If this fails, because we're running somewhere
+    # Attempt to import the REDBOARD HAT library. If this fails, because we're running somewhere
     # that doesn't have the library, we create dummy functions for set_speeds and stop_motors which
     # just print out what they'd have done. This is a fairly common way to deal with hardware that
     # may or may not exist! Obviously if you're actually running this on one of Brian's robots you
@@ -129,19 +135,31 @@ def mixer(yaw, throttle, max_power=100):
 # functions for OLED display
 
 def clearDisplay():
-    draw.rectangle((0, 0, width, height), outline=0, fill=0)
+    if OLEDflag:
+        draw.rectangle((0, 0, width, height), outline=0, fill=0)
+    else:
+        pass
 
 def lineOneText(text):
-    draw.rectangle((0, 0, width, height/2), outline=0, fill=0)
-    draw.text((0, 2), text, font=font, fill=255)
+    if OLEDflag:
+        draw.rectangle((0, 0, width, height/2), outline=0, fill=0)
+        draw.text((0, 2), text, font=font, fill=255)
+    else:
+        pass
 
 def lineTwoText(text):
-    draw.rectangle((0, 32, width, height / 2), outline=0, fill=0)
-    draw.text((0, 16), text, font=font, fill=255)
+    if OLEDflag:
+        draw.rectangle((0, 32, width, height / 2), outline=0, fill=0)
+        draw.text((0, 16), text, font=font, fill=255)
+    else:
+        pass
 
 def updateDisplay():
-    disp.image(image)
-    disp.show()
+    if OLEDflag:
+        disp.image(image)
+        disp.show()
+    else:
+        pass
 
 # end OLED functions
 
@@ -405,7 +423,7 @@ try:
 except RobotStopException:
     # This exception will be raised when the home button is pressed, at which point we should
     # stop the motors.
-    print("stoping motors")
+    print("stoping motors and exit to commard line")
     stop_motors()
     # write to display exit message
     lineOneText("exited to ")
