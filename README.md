@@ -8,7 +8,7 @@ Note: you may also need to adjust the output from the function mixer to suit you
 
 # Display
 
-The Redboard+ can be fitted with a daughter board with a built in display, if you are not using a Redboard+ a generic SSD1306 OLED 32 x 16 display can be used instead.
+The Redboard+ can be fitted with a daughter board with a built in display, if you are not using a Redboard+ a generic SSD1306 OLED 32 x 16 display can be used instead. A display is not required for the code to run.
 
 # Battery Reading
 
