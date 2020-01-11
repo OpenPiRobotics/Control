@@ -134,32 +134,44 @@ def mixer(yaw, throttle, max_power=100):
 
 # functions for OLED display
 
-def clearDisplay():
-    if OLEDflag:
+if OLEDflag:
+
+    def clearDisplay():
         draw.rectangle((0, 0, width, height), outline=0, fill=0)
-    else:
-        pass
 
-def lineOneText(text):
-    if OLEDflag:
-        draw.rectangle((0, 0, width, height/2), outline=0, fill=0)
+    def lineOneText(text):
+        draw.rectangle((0, 0, width, height / 2), outline=0, fill=0)
         draw.text((0, 2), text, font=font, fill=255)
-    else:
-        pass
 
-def lineTwoText(text):
-    if OLEDflag:
+    def lineTwoText(text):
+
         draw.rectangle((0, 32, width, height / 2), outline=0, fill=0)
         draw.text((0, 16), text, font=font, fill=255)
-    else:
-        pass
 
-def updateDisplay():
-    if OLEDflag:
+    def updateDisplay():
+
         disp.image(image)
         disp.show()
-    else:
+
+else:
+
+    def clearDisplay():
         pass
+
+
+    def lineOneText(text):
+        print(text)
+
+
+    def lineTwoText(text):
+
+        print(text)
+
+        
+    def updateDisplay():
+
+        pass
+
 
 # end OLED functions
 
