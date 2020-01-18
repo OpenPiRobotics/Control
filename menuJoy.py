@@ -33,18 +33,21 @@ except ValueError:
     print('SSD1306 OLED Screen not found')
     print('')
 
-if OLEDflag:
 
-    # Create blank image for drawing.
-    # Make sure to create image with mode '1' for 1-bit color.
-    width = disp.width
-    height = disp.height
-    image = Image.new('1', (width, height))
+# hardware setup
 
-    # Get drawing object to draw on image.
-    draw = ImageDraw.Draw(image)
+# RoF
 
-    font = ImageFont.truetype('/home/pi/RedBoard/system/Greenscr.ttf', 12)
+
+
+try:
+    # Try to import the sensors module
+    import sensors
+    # initalise ToF sensors
+    sensors.initialise()
+
+except ModuleNotFoundError:
+    print("sensor library not available")
 
 
 
@@ -132,9 +135,20 @@ def mixer(yaw, throttle, max_power=100):
     scale = float(max_power) / max(1, abs(left), abs(right))
     return int(left * scale), int(right * scale)
 
-# functions for OLED display
+# functions for OLED display and setup display
 
 if OLEDflag:
+
+    # Create blank image for drawing.
+    # Make sure to create image with mode '1' for 1-bit color.
+    width = disp.width
+    height = disp.height
+    image = Image.new('1', (width, height))
+
+    # Get drawing object to draw on image.
+    draw = ImageDraw.Draw(image)
+
+    font = ImageFont.truetype('/home/pi/RedBoard/system/Greenscr.ttf', 12)
 
     def clearDisplay():
         draw.rectangle((0, 0, width, height), outline=0, fill=0)
@@ -167,10 +181,11 @@ else:
 
         print(text)
 
-        
+
     def updateDisplay():
 
         pass
+
 
 
 # end OLED functions
@@ -215,6 +230,11 @@ refreshTime = 60 # in seconds
 lastRefresh = time() - refreshTime
 displayHomeScreenFlag = False
 
+# maze flags and verables
+
+tofRunningFlag = False
+tofSensorsOn = False
+
 
 
 # End of setup
@@ -237,15 +257,16 @@ try:
                     # Get joystick values from the left & right analogue sticks
                     x_axis, y_axis = joystick['rx', 'ly']
                     # Get power from mixer function
-                    power_left, power_right = mixer(yaw=x_axis, throttle=y_axis)
-                    #print(power_left, power_right)
-                    # Set motor speeds
-                    if power_left == 0 and power_right == 0:
-                        stop_motors()
-                    elif menu['Manual']:
+
+                    if menu['Manual']:
+                        power_left, power_right = mixer(yaw=x_axis, throttle=y_axis)
                         set_speeds(power_left, power_right)
+                        #print("Manaual Mode on")
+
                     else:
                         stop_motors()
+
+
                     # Get a ButtonPresses object containing everything that was pressed since the last
                     # time around this loop.
                     joystick.check_presses()
@@ -257,6 +278,12 @@ try:
                         if 'select' in joystick.presses:
                             raise RobotStopException()
 
+                        if 'start' in joystick.presses:
+
+                            if menu['Manual']:
+                                menu['Manual'] = False
+                            else:
+                                menu['Manual'] = True
 
                         # menu flag set/unset  ** is the unpacking operator and enables a shallow copy of the dictionary
 
@@ -283,6 +310,7 @@ try:
                                     text = "No mode selected"
                                 print("menu entered")
                                 lineOneText(text)
+                                updateDisplay()
                                 for key in menuItems:
                                     menu[key] = False
 
@@ -324,6 +352,7 @@ try:
 
 
 
+
                         # print menu item to command line
 
                         if lastMenuIndex != menuIndex and menuFlag:
@@ -333,6 +362,7 @@ try:
                             print("Press 'O' to select")
                             lineTwoText("'O' to select")
                             lastMenuIndex = menuIndex
+                            updateDisplay()
 
                     # screen blanking or home screen update
                     # home screen refresh time in seconds
@@ -342,21 +372,16 @@ try:
                         clearDisplay()
                         displayTimeOutFlag = False
                         displayHomeScreenFlag = True
-
-
-                    #updateDisplay()
+                        updateDisplay()
 
                     if menuFlag == False and displayTimeOutFlag == False:
                         if currentTime - lastRefresh > refreshTime or displayHomeScreenFlag:
                             homeDisplayUpdate()
                             lastRefresh = time()
                             displayHomeScreenFlag = False
-
-                    updateDisplay()
-
+                            updateDisplay()
 
                     # end of screen blanking or home screen update
-
 
 
                     if menu['Manual']:
@@ -371,7 +396,6 @@ try:
 
                     if menu['Maze']:
 
-                        # code for Maze here
                         pass
 
                     if menu['Toxic']:
@@ -389,6 +413,7 @@ try:
                         print(IP)
                         lineOneText('')
                         lineTwoText(IP)
+                        updateDisplay()
 
                         menu['IP'] = False
                         newModeFlag = False
@@ -419,6 +444,7 @@ try:
                         text = "New Mode: " + menuItems[mode]
                         print(text)
                         lineOneText(text)
+                        updateDisplay()
                         newModeFlag = False
 
 
@@ -431,6 +457,8 @@ try:
             updateDisplay()
             sleep(1)
             clearDisplay()
+            updateDisplay()
+            sleep(0.25)
 
 except RobotStopException:
     # This exception will be raised when the home button is pressed, at which point we should
