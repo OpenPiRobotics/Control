@@ -191,9 +191,8 @@ else:
 # end OLED functions
 
 def homeDisplayUpdate():
-    cmd = "python3 /home/pi/RedBoard/system/bat_check.py"
-    mainBattery = subprocess.check_output(cmd, shell=True).decode()
-    mainBattery = mainBattery.replace("\n", "")
+    mainBattery = str(batteryVoltage())
+
     if len(mainBattery) == 4:
         mainBattery += "0"
     text1 = "Batt: " + mainBattery + "V"
@@ -207,6 +206,25 @@ def homeDisplayUpdate():
 
     print(text1 + " " + text2)
 
+
+def batteryVoltage():
+    ADC_bat_conversion_Value = 1098.0
+    voltage = readADC()
+
+    conversion_0 = (voltage[1]) + (voltage[0] << 8)
+    volts_in = conversion_0 / ADC_bat_conversion_Value
+
+    volts_in = round(volts_in, 2)
+
+    return volts_in
+
+
+def readADC(channel=0, i2cBus=1, address=0x48):  # default are for the ADC on the redboard
+    bus = smbus.SMBus(i2cBus)
+    bus.write_i2c_block_data(address, 0x01, [0xc3, 0x83])
+    adc = bus.read_i2c_block_data(address, 0x00, 2)
+
+    return adc
 
 # setup for main loop
 
